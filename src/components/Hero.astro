@@ -1,0 +1,83 @@
+---
+import { baseUrl } from '@/utils/functions';
+---
+
+<section>
+  <canvas class='am-canvas'></canvas>
+</section>
+
+<script>
+  import { $ } from '@/utils/functions';
+  //@ts-ignore
+  import { createNoise3D } from 'simplex-noise';
+  import { Pane } from 'tweakpane';
+  const noise3D = createNoise3D();
+  const canvas = $('.am-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  const menu = new Pane();
+  const PARAMS = {
+    R: 0,
+    G: 141,
+    B: 0,
+    A: 255,
+    SCALE_R: 4,
+    SCALE_G: 4,
+    SCALE_B: 4,
+    DIV_Z: 4,
+  };
+  menu.addBinding(PARAMS, 'R', { min: 0, max: 255, step: 1 });
+  menu.addBinding(PARAMS, 'G', { min: 0, max: 255, step: 1 });
+  menu.addBinding(PARAMS, 'B', { min: 0, max: 255, step: 1 });
+  menu.addBinding(PARAMS, 'A', { min: 0, max: 255, step: 1 });
+  menu.addBinding(PARAMS, 'SCALE_R', { min: 4, max: 32, step: 4 });
+  menu.addBinding(PARAMS, 'SCALE_G', { min: 4, max: 32, step: 4 });
+  menu.addBinding(PARAMS, 'SCALE_B', { min: 4, max: 32, step: 4 });
+  menu.addBinding(PARAMS, 'DIV_Z', { min: 4, max: 32, step: 4 });
+
+  let widthCanvas: number;
+  let heightCanvas: number;
+  let imageData: ImageData;
+  let data: Uint8ClampedArray;
+  let t = 0;
+
+  function resizeCanvas() {
+    widthCanvas = canvas.width = window.innerWidth;
+    heightCanvas = canvas.height = window.innerHeight;
+    imageData = ctx.getImageData(0, 0, widthCanvas, heightCanvas);
+    data = imageData.data;
+  }
+
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  function drawPlasma() {
+    for (let x = 0; x < widthCanvas; x++) {
+      for (let y = 0; y < heightCanvas; y++) {
+        //[0, 1]
+        const r =
+          noise3D(x / PARAMS.SCALE_R, y / PARAMS.SCALE_R, t / PARAMS.DIV_Z) * 0.5 + 0.5;
+        const g =
+          noise3D(x / PARAMS.SCALE_G, y / PARAMS.SCALE_G, t / PARAMS.DIV_Z) * 0.5 + 0.5;
+        const b =
+          noise3D(x / PARAMS.SCALE_B, y / PARAMS.SCALE_B, t / PARAMS.DIV_Z) * 0.5 + 0.5;
+        const index = (x + y * widthCanvas) * 4;
+        data[index + 0] = r * PARAMS.R; // [0, 255]
+        data[index + 1] = (r + g) * PARAMS.G; //[0, 200]
+        data[index + 2] = b * PARAMS.B;
+        data[index + 3] = PARAMS.A;
+      }
+    }
+    t++; //Eje Z changes.
+    ctx.putImageData(imageData, 0, 0);
+    requestAnimationFrame(drawPlasma);
+  }
+
+  drawPlasma();
+</script>
+
+<style>
+  section {
+    height: 100vh;
+    overflow: hidden;
+  }
+</style>
